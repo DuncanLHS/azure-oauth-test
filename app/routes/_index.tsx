@@ -1,4 +1,6 @@
-import type { MetaFunction } from "@vercel/remix";
+import { Form, json, useLoaderData } from "@remix-run/react";
+import type { LoaderFunctionArgs, MetaFunction } from "@vercel/remix";
+import { createSupabaseServerClient } from "~/lib/supabase/server-client";
 
 export const meta: MetaFunction = () => {
   return [
@@ -7,35 +9,33 @@ export const meta: MetaFunction = () => {
   ];
 };
 
+export async function loader({ request }: LoaderFunctionArgs) {
+  const { supabase } = createSupabaseServerClient({ request });
+
+  const { data: user } = await supabase.auth.getUser();
+
+  return json(user);
+}
+
 export default function Index() {
+  const { user } = useLoaderData<typeof loader>();
   return (
     <div style={{ fontFamily: "system-ui, sans-serif", lineHeight: "1.8" }}>
-      <h1>Welcome to Remix</h1>
-      <ul>
-        <li>
-          <a
-            target="_blank"
-            href="https://remix.run/tutorials/blog"
-            rel="noreferrer"
-          >
-            15m Quickstart Blog Tutorial
-          </a>
-        </li>
-        <li>
-          <a
-            target="_blank"
-            href="https://remix.run/tutorials/jokes"
-            rel="noreferrer"
-          >
-            Deep Dive Jokes App Tutorial
-          </a>
-        </li>
-        <li>
-          <a target="_blank" href="https://remix.run/docs" rel="noreferrer">
-            Remix Docs
-          </a>
-        </li>
-      </ul>
+      {user ? (
+        <div>
+          <p>
+            You are logged in as{" "}
+            <strong>{user.user_metadata?.full_name || "unknown"}</strong>.
+          </p>
+          <Form method="post" action="/logout">
+            <button type="submit">Logout</button>
+          </Form>
+        </div>
+      ) : (
+        <p>
+          You are not logged in. <a href="/login">Log in</a>
+        </p>
+      )}
     </div>
   );
 }
